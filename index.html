@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#030712">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>CroreQuest — Play</title>
+<!-- Manifest is optional to avoid CORS issues on file:// protocol -->
+<link rel="manifest" href="manifest.json" crossorigin="use-credentials">
+<!-- High-end modern fonts: Outfit for body, Space Grotesk for Display/Mono -->
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root {
+  --bg:#020617; --surface:#0F172A; --surface2:#1E293B;
+  --border:rgba(255,255,255,0.08); --text:#F1F5F9; --muted:#94A3B8;
+  --cyan:#22D3EE; --cyan-dim:rgba(34,211,238,0.1);
+  --gold:#FDE047; --gold-dim:rgba(253,224,71,0.1);
+  --green:#4ADE80; --green-dim:rgba(74,222,128,0.1);
+  --red:#FB7185; --red-dim:rgba(251,113,133,0.1);
+  --radius:24px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+h1,h2{font-family:'Space Grotesk',sans-serif;}
+.bg-canvas{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
+.orb{position:absolute;border-radius:50%;filter:blur(100px);opacity:0.25;animation:floatOrb linear infinite;}
+.o1{width:600px;height:600px;background:#00E5FF;top:-200px;left:-200px;animation-duration:22s;}
+.o2{width:500px;height:500px;background:#FBBF24;bottom:-150px;right:-100px;animation-duration:28s;animation-delay:-9s;}
+.o3{width:350px;height:350px;background:#10B981;top:45%;left:55%;animation-duration:19s;animation-delay:-6s;}
+.o4{width:300px;height:300px;background:#F43F5E;bottom:25%;left:15%;animation-duration:24s;animation-delay:-13s;}
+@keyframes floatOrb{0%{transform:translate(0,0) scale(1);}25%{transform:translate(50px,-40px) scale(1.06);}50%{transform:translate(-30px,60px) scale(0.94);}75%{transform:translate(40px,25px) scale(1.04);}100%{transform:translate(0,0) scale(1);}}
+.grid-bg{position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(0,229,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.03) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;}
+.screen{display:none;min-height:100vh;position:relative;z-index:1;}
+.screen.active{display:flex;flex-direction:column;}
+.ticker-bar{background:rgba(0,229,255,0.06);border-bottom:1px solid rgba(0,229,255,0.15);padding:10px 0;overflow:hidden;white-space:nowrap;backdrop-filter:blur(10px);}
+.ticker-track{display:inline-block;animation:tickScroll 40s linear infinite;font-family:'Space Grotesk',sans-serif;font-size:12px;letter-spacing:0.5px;}
+.ti{display:inline-block;margin-right:60px;color:var(--muted);}
+.ti .tn{color:var(--cyan);font-weight:700;margin-right:8px;}
+.ti .tv{color:var(--text);margin-right:6px;font-weight:500;}
+.ti .tu{color:var(--green);font-weight:600;}
+.ti .td{color:var(--red);font-weight:600;}
+@keyframes tickScroll{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+.hero{text-align:center;padding:64px 24px 40px;position:relative;}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;background:var(--cyan-dim);border:1px solid rgba(0,229,255,0.3);color:var(--cyan);font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:8px 20px;border-radius:100px;margin-bottom:28px;font-family:'Space Grotesk',sans-serif;}
+.live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 12px var(--cyan);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(0.8);}}
+.hero-title{font-size:clamp(60px,12vw,120px);font-weight:700;letter-spacing:1px;line-height:0.9;margin-bottom:24px;background:linear-gradient(135deg,#fff 20%,var(--cyan) 90%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-sub{font-size:18px;color:var(--text);opacity:0.8;max-width:460px;margin:0 auto 32px;line-height:1.6;font-weight:400;}
+
+/* Credential Form styling */
+.cred-box{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:380px;margin:0 auto 32px;backdrop-filter:blur(10px);}
+.cred-in{width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(0,229,255,0.2);border-radius:12px;padding:16px;font-family:'Space Grotesk',sans-serif;font-size:16px;color:var(--text);outline:none;margin-bottom:12px;transition:border-color .2s;}
+.cred-in:focus{border-color:var(--cyan);}
+.cred-in::placeholder{color:var(--muted);}
+
+.hero-pills{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:48px;}
+.pill{background:var(--surface);border:1px solid rgba(255,255,255,0.1);color:var(--text);opacity:0.9;font-size:12px;font-weight:500;padding:8px 16px;border-radius:100px;font-family:'Space Grotesk',sans-serif;letter-spacing:0.5px;}
+.cta{background:var(--cyan);color:#030712;border:none;padding:18px 52px;border-radius:100px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:20px;letter-spacing:1px;cursor:pointer;transition:all .3s cubic-bezier(0.4, 0, 0.2, 1);box-shadow:0 0 50px rgba(0,229,255,0.4);width:100%;display:block;}
+.cta:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 0 80px rgba(0,229,255,0.6);}
+.dash{max-width:1120px;margin:0 auto;padding:0 20px 60px;}
+.section-label{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text);opacity:0.7;margin-bottom:24px;display:flex;align-items:center;gap:12px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;margin-bottom:32px;}
+.mcard{background:linear-gradient(180deg, var(--surface) 0%, rgba(15,23,42,0.4) 100%);border:1px solid var(--border);border-radius:var(--radius);padding:24px;position:relative;overflow:hidden;transition:all .4s cubic-bezier(0.175, 0.885, 0.32, 1.275);cursor:pointer;}
+.mcard::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--ca,var(--cyan));opacity:.8;}
+.mcard:hover{border-color:var(--ca,var(--cyan));transform:translateY(-8px) scale(1.02);box-shadow:0 20px 60px rgba(0,0,0,.8);z-index:10;}
+.mc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.mc-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--ca-dim,var(--cyan-dim));}
+.mc-name{font-size:15px;font-weight:700;}
+.mc-sub{font-size:11px;color:var(--muted);font-family:'Space Grotesk',sans-serif;margin-top:2px;font-weight:500;}
+.mc-status{font-family:'Space Grotesk',sans-serif;font-size:10px;padding:4px 10px;border-radius:100px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+.s-live{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3);}
+.mc-price{font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700;letter-spacing:-1px;margin-bottom:6px;min-height:38px;}
+.mc-change{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;margin-bottom:16px;}
+.up{color:var(--green);} .dn{color:var(--red);} .neu{color:var(--muted);}
+.why-box{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:12px;padding:14px;}
+.why-title{font-size:11px;font-family:'Space Grotesk',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--ca,var(--cyan));margin-bottom:8px;}
+.why-text{font-size:13px;color:var(--text);opacity:0.75;line-height:1.6;}
+
+#game{padding:0;}
+.g-header{background:rgba(3,7,18,.85);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(24px);}
+.g-logo{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;letter-spacing:2px;}
+.g-logo span{color:var(--cyan);}
+.lvl-badge{background:var(--cyan-dim);color:var(--cyan);font-size:12px;font-weight:700;padding:6px 16px;border-radius:100px;font-family:'Space Grotesk',sans-serif;border:1px solid rgba(0,229,255,.3);display:inline-flex;align-items:center;gap:8px;box-shadow:0 0 15px rgba(0,229,255,0.2);}
+.play-prof{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;margin-right:16px;color:var(--gold);}
+.g-body{padding:24px;max-width:1080px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+@media(max-width:768px){.g-body{grid-template-columns:1fr;}}
+.gcard{background:linear-gradient(180deg, var(--surface) 0%, rgba(11,20,38,0.5) 100%);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:0 8px 30px rgba(0,0,0,0.3);}
+.gc-title{font-size:12px;font-family:'Space Grotesk',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--text);opacity:0.7;margin-bottom:16px;display:flex;justify-content:space-between;}
+.g-span{grid-column:1/-1;}
+.bal-disp{font-family:'Space Grotesk',sans-serif;font-size:clamp(50px,9vw,80px);font-weight:700;letter-spacing:1px;line-height:1;margin-bottom:12px;transition:color .2s;text-shadow:0 0 40px rgba(255,255,255,0.1);}
+.bal-disp.win{color:var(--green);text-shadow:0 0 40px rgba(16,185,129,0.3);}
+.bal-disp.loss{color:var(--red);text-shadow:0 0 40px rgba(244,63,94,0.3);}
+.bal-meta{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.bc{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;padding:4px 12px;border-radius:100px;}
+.bc.up{background:var(--green-dim);color:var(--green);}
+.bc.dn{background:var(--red-dim);color:var(--red);}
+.b-mo{font-family:'Space Grotesk',sans-serif;font-size:13px;color:var(--text);opacity:0.7;font-weight:500;}
+.prog-row{display:flex;justify-content:space-between;font-size:11px;font-family:'Space Grotesk',sans-serif;color:var(--text);opacity:0.8;margin:20px 0 8px;font-weight:600;}
+.prog-bar{height:6px;background:var(--border);border-radius:100px;overflow:hidden;}
+.prog-fill{height:100%;background:var(--cyan);border-radius:100px;transition:width .3s ease-out;box-shadow:0 0 10px var(--cyan);}
+.btn-group{display:flex;gap:12px;margin-top:24px;flex-wrap:wrap;}
+.skip-btn{background:var(--surface2);color:var(--cyan);border:1px solid rgba(0,229,255,.3);padding:14px 28px;border-radius:100px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:1px;}
+.skip-btn:hover{background:var(--cyan);color:#000;box-shadow:0 0 20px rgba(0,229,255,0.4);transform:translateY(-2px);}
+.skip-btn.fast{background:transparent;border-color:var(--gold);color:var(--gold);}
+.skip-btn.fast:hover{background:var(--gold);color:#000;box-shadow:0 0 20px rgba(251,191,36,0.4);}
+.chart-container{position:relative;height:240px;}
+.p-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px;}
+.p-item{background:rgba(255,255,255,0.02);border-radius:14px;padding:16px;text-align:center;border:1px solid var(--border);}
+.p-name{font-size:11px;color:var(--text);opacity:0.6;font-family:'Space Grotesk',sans-serif;font-weight:600;letter-spacing:1px;text-transform:uppercase;}
+.p-val{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:var(--cyan);margin-top:6px;}
+
+.val-box{margin-top:20px;display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.03);padding:14px;border-radius:12px;border:1px solid var(--border);}
+.v-det{font-size:12px;color:var(--text);opacity:0.8;font-family:'Space Grotesk',sans-serif;font-weight:600;display:flex;flex-direction:column;gap:4px;}
+
+.i-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:8px;}
+.i-card{background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:16px;padding:20px;transition:all .3s;}
+.i-card:hover{border-color:var(--cyan);background:rgba(0,229,255,0.03);transform:translateY(-2px);}
+.i-name{font-size:16px;font-weight:700;margin-bottom:4px;}
+.i-ret{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;color:var(--green);margin-bottom:12px;}
+.amt-in{width:100%;background:rgba(0,0,0,0.2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--text);outline:none;margin-bottom:12px;transition:border-color .2s;}
+.amt-in:focus{border-color:var(--cyan);}
+.i-btn{flex:1;background:rgba(0,229,255,.1);color:var(--cyan);border:1px solid rgba(0,229,255,.3);padding:12px;border-radius:10px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px;transition:all .2s;text-align:center;}
+.i-btn:hover{background:var(--cyan);color:#000;box-shadow:0 0 15px rgba(0,229,255,0.3);}
+.w-btn{background:rgba(244,63,94,.1);color:var(--red);border-color:rgba(244,63,94,.3);}
+.w-btn:hover{background:var(--red);color:#000;box-shadow:0 0 15px rgba(244,63,94,0.3);}
+
+.chat-widget{position:fixed;bottom:30px;right:30px;z-index:500;}
+.chat-toggle{width:60px;height:60px;border-radius:50%;background:var(--cyan);border:none;cursor:pointer;font-size:26px;box-shadow:0 0 40px rgba(0,229,255,.5);transition:all .3s cubic-bezier(0.4, 0, 0.2, 1);display:flex;align-items:center;justify-content:center;}
+.chat-toggle:hover{transform:scale(1.1) rotate(5deg);box-shadow:0 0 60px rgba(0,229,255,.6);}
+.chat-box{position:absolute;bottom:76px;right:0;width:340px;background:var(--surface);border:1px solid rgba(0,229,255,.3);border-radius:24px;box-shadow:0 20px 80px rgba(0,0,0,.8);display:none;flex-direction:column;overflow:hidden;max-height:500px;}
+.chat-box.open{display:flex;}
+.chat-head{background:linear-gradient(135deg,rgba(0,229,255,.15),rgba(0,229,255,.05));border-bottom:1px solid rgba(0,229,255,.2);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;}
+.chat-hname{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;color:var(--cyan);}
+.chat-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;min-height:220px;max-height:300px;scroll-behavior:smooth;}
+.msg{max-width:85%;padding:12px 16px;border-radius:16px;font-size:14px;line-height:1.5;}
+.msg.ai{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-bottom-left-radius:4px;align-self:flex-start;}
+.msg.user{background:var(--cyan);color:#000;font-weight:600;border-bottom-right-radius:4px;align-self:flex-end;}
+.msg.typing{background:rgba(0,229,255,.05);color:var(--text);opacity:0.7;font-style:italic;align-self:flex-start;font-size:12px;}
+.chat-input-row{display:flex;gap:10px;padding:14px;border-top:1px solid var(--border);background:rgba(0,0,0,0.2);}
+.chat-in{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:100px;padding:10px 16px;font-family:'Outfit',sans-serif;font-size:14px;color:var(--text);outline:none;}
+.chat-in:focus{border-color:var(--cyan);}
+.chat-send{background:var(--cyan);color:#000;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+
+#death, #win{align-items:center;justify-content:center;padding:40px 20px;text-align:center;}
+#death{background:#050204;}
+#win{background:#020504;}
+.death-inner, .win-inner{max-width:540px;position:relative;z-index:1;background:rgba(0,0,0,0.4);padding:40px;border-radius:24px;border:1px solid var(--border);backdrop-filter:blur(20px);}
+.d-emoji, .w-emoji{font-size:80px;margin-bottom:16px;}
+.d-title, .w-title{font-family:'Space Grotesk',sans-serif;font-size:72px;font-weight:700;letter-spacing:2px;margin-bottom:12px;text-shadow:0 0 50px;}
+.d-title{color:var(--red);text-shadow:0 0 50px rgba(244,63,94,.5);}
+.w-title{color:var(--green);text-shadow:0 0 50px rgba(16,185,129,.5);}
+.obit-box{background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.2);border-radius:16px;padding:24px;margin-bottom:32px;text-align:left;}
+.obit-lbl{font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--red);margin-bottom:12px;}
+.obit-text{font-size:16px;line-height:1.7;color:#E2E8F0;font-style:italic;}
+.score-row{display:flex;gap:16px;justify-content:center;margin-bottom:40px;}
+.score-chip{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:16px;padding:16px 28px;text-align:center;}
+.sc-val{font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700;color:var(--text);}
+.sc-lbl{font-size:11px;color:var(--text);opacity:0.6;font-family:'Space Grotesk',sans-serif;font-weight:600;margin-top:4px;}
+.restart-btn{background:var(--red);color:white;border:none;padding:18px 56px;border-radius:100px;font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;cursor:pointer;transition:all .3s;}
+
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface2);border:1px solid var(--cyan);box-shadow:0 10px 40px rgba(0,229,255,0.2);color:var(--text);padding:14px 32px;border-radius:100px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;opacity:0;transition:all .3s;z-index:1000;max-width:90%;text-align:center;line-height:1.4;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+.fu{animation:fadeUp .6s cubic-bezier(0.16, 1, 0.3, 1) forwards;}
+.fu1{animation-delay:.1s;opacity:0;} .fu2{animation-delay:.2s;opacity:0;} .fu3{animation-delay:.3s;opacity:0;} .fu4{animation-delay:.4s;opacity:0;} .fu5{animation-delay:.5s;opacity:0;}
+.shimmer{background:linear-gradient(90deg,rgba(255,255,255,.03) 25%,rgba(255,255,255,.1) 50%,rgba(255,255,255,.03) 75%);background-size:200% 100%;animation:shim 2s infinite;border-radius:8px;}
+@keyframes shim{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+.back-btn{background:transparent;color:var(--text);opacity:0.7;border:1px solid var(--border);padding:8px 16px;border-radius:100px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;}
+.back-btn:hover{background:rgba(255,255,255,0.05);opacity:1;}
+
+#leaderboardModal {
+  position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);z-index:9999;
+  display:none;justify-content:center;align-items:center;
+}
+#leaderboardModal.active { display:flex; }
+.lb-box {
+  background:var(--surface);border:1px solid var(--cyan);border-radius:24px;width:90%;max-width:500px;
+  padding:32px;text-align:center;box-shadow:0 0 50px rgba(0,229,255,0.2);position:relative;
+}
+.lb-title {font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;margin-bottom:20px;color:var(--cyan);}
+.lb-list {display:flex;flex-direction:column;gap:12px;text-align:left;}
+.lb-item {display:flex;justify-content:space-between;background:rgba(255,255,255,0.03);padding:14px 20px;border-radius:12px;border:1px solid var(--border);font-family:'Space Grotesk',sans-serif;font-weight:600;}
+.lb-item.me {background:rgba(0,229,255,0.1);border-color:var(--cyan);color:#fff;}
+.lb-close {position:absolute;top:20px;right:20px;background:none;border:none;color:var(--text);font-size:24px;cursor:pointer;}
+
+/* Market Home Styles */
+.mhome-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:24px; padding:24px; max-width:1200px; margin:0 auto; }
+.mhome-card { background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:32px; padding:32px; transition:all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.mhome-card:hover { transform:translateY(-10px); border-color:var(--cyan); background:rgba(34,211,238,0.05); }
+.mhome-title { font-family:'Space Grotesk'; font-size:24px; font-weight:700; color:var(--text); margin-bottom:12px; display:flex; align-items:center; gap:12px; }
+.mhome-val { font-family:'Space Grotesk'; font-size:36px; font-weight:700; color:var(--cyan); margin-bottom:16px; }
+.mhome-desc { font-size:14px; line-height:1.6; color:var(--muted); margin-bottom:20px; }
+.mhome-stats { display:grid; grid-template-columns:1fr 1fr; gap:12px; border-top:1px solid var(--border); pt:16px; margin-top:16px; }
+.ms-item { display:flex; flex-direction:column; }
+.ms-lbl { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); font-weight:700; }
+.ms-val { font-family:'Space Grotesk'; font-size:14px; font-weight:600; color:var(--text); }
+</style>
+</head>
+<body>
+<div class="bg-canvas">
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div><div class="orb o4"></div>
+</div>
+<div class="grid-bg"></div>
+<div id="landing" class="screen active">
+  <div class="hero">
+    <div class="eyebrow fu fu1"><span class="live-dot"></span>&nbsp;Ultra Fast App Mode</div>
+    <h1 class="hero-title fu fu2">CRORE<br>QUEST</h1>
+    <p class="hero-sub fu fu3">Start with ₹250. Build a Crore.<br>Master the markets with AI-driven insights.</p>
+    
+    <div class="cred-box fu fu4" id="loginBox">
+      <input type="text" id="playName" class="cred-in" placeholder="Enter Username to Save Profile...">
+      <input type="number" id="playStartAmt" class="cred-in" placeholder="Starting Money (default ₹250)...">
+      <button class="cta" style="margin-top:12px;" onclick="startGame()">PLAY CROREQUEST →</button>
+    </div>
+
+    <div class="hero-pills fu fu5">
+      <span class="pill" onclick="showInfo('nifty')" style="cursor:pointer;">💸 Nifty 50</span>
+      <span class="pill" onclick="showInfo('gold')" style="cursor:pointer;">🏆 24K Gold</span>
+      <span class="pill" onclick="showInfo('btc')" style="cursor:pointer;">🔥 Bitcoin</span>
+    </div>
+  </div>
+</div>
+
+<div id="marketHome" class="screen">
+  <div class="g-header">
+    <span class="g-logo">CRORE<span>QUEST</span> — Market</span>
+    <button class="cta" style="width:auto; padding:10px 30px; font-size:16px;" onclick="showScreen('game')">GO TO PORTFOLIO →</button>
+  </div>
+  <div class="mhome-grid">
+    <div class="mhome-card fu fu1">
+      <div class="mhome-title">🇮🇳 Nifty 50</div>
+      <div class="mhome-val" id="mh-nifty">₹0</div>
+      <div class="mhome-desc">The benchmark of the Indian economy. Represents 50 of the largest and most liquid Indian blue-chip companies. A diversified bet on India's growth.</div>
+      <div class="mhome-stats">
+        <div class="ms-item"><span class="ms-lbl">Risk</span><span class="ms-val" style="color:var(--cyan)">Medium</span></div>
+        <div class="ms-item"><span class="ms-lbl">Avg Return</span><span class="ms-val">~12% p.a.</span></div>
+      </div>
+    </div>
+    <div class="mhome-card fu fu2">
+      <div class="mhome-title">✨ 24K Gold</div>
+      <div class="mhome-val" id="mh-gold">₹0</div>
+      <div class="mhome-desc">The ultimate safe haven. Gold preserves wealth during high inflation and market crashes. Every balanced portfolio needs a golden shield.</div>
+      <div class="mhome-stats">
+        <div class="ms-item"><span class="ms-lbl">Risk</span><span class="ms-val" style="color:var(--green)">Low</span></div>
+        <div class="ms-item"><span class="ms-lbl">Avg Return</span><span class="ms-val">~8% p.a.</span></div>
+      </div>
+    </div>
+    <div class="mhome-card fu fu3">
+      <div class="mhome-title">🏦 Fixed Deposit</div>
+      <div class="mhome-val">8% <span style="font-size:16px; opacity:0.6;">Guaranteed</span></div>
+      <div class="mhome-desc">Park your idle cash here for zero-risk growth. While it won't make you a crorepati alone, it keeps your foundation solid.</div>
+      <div class="mhome-stats">
+        <div class="ms-item"><span class="ms-lbl">Risk</span><span class="ms-val" style="color:var(--green)">None</span></div>
+        <div class="ms-item"><span class="ms-lbl">Liquidity</span><span class="ms-val">High</span></div>
+      </div>
+    </div>
+    <div class="mhome-card fu fu4">
+      <div class="mhome-title">📊 Mutual Fund SIP</div>
+      <div class="mhome-val">12% <span style="font-size:16px; opacity:0.6;">Projected</span></div>
+      <div class="mhome-desc">Systematic Investment Planning. Buy small amounts every month to average out costs and harness the 8th wonder of the world: Compounding.</div>
+      <div class="mhome-stats">
+        <div class="ms-item"><span class="ms-lbl">Risk</span><span class="ms-val" style="color:var(--cyan)">Moderate</span></div>
+        <div class="ms-item"><span class="ms-lbl">Power</span><span class="ms-val">Compounding</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="game" class="screen">
+  <div class="g-header">
+    <span class="g-logo">CRORE<span>QUEST</span></span>
+    <span style="display:flex; gap:12px; align-items:center;">
+      <span class="play-prof" id="profileName">USER: GUEST</span>
+      <button onclick="document.getElementById('leaderboardModal').classList.add('active')" class="skip-btn fast" style="padding:6px 14px; font-size:12px;">🏆 Leaderboard</button>
+      <button onclick="showScreen('marketHome')" class="back-btn">📈 MARKET</button>
+      <span class="lvl-badge" id="levelBadge">LEVEL 1</span>
+    </span>
+  </div>
+  <div class="g-body">
+    <div class="gcard g-span">
+      <div class="gc-title">Your Virtual Empire</div>
+      <div class="bal-disp" id="balanceDisplay">₹250</div>
+      <div class="bal-meta">
+        <span class="bc up" id="balanceChange">+0.00%</span>
+        <span class="b-mo" id="monthDisplay">📅 MONTH 0</span>
+      </div>
+      <div class="prog-row"><span id="progressLabel">Level 1: ₹250 → ₹1,000</span><span id="progressPct">0%</span></div>
+      <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+      <div class="btn-group">
+        <button class="skip-btn" onclick="skipMonth()">⏩ 1 MONTH</button>
+        <button class="skip-btn fast" onclick="skipYear()">🚀 1 YEAR (FAST)</button>
+      </div>
+    </div>
+    <div class="gcard">
+      <div class="gc-title">Portfolio Growth</div>
+      <div class="chart-container"><canvas id="growthChart"></canvas></div>
+    </div>
+    <div class="gcard">
+      <div class="gc-title">Portfolio Breakdown</div>
+      <div class="p-grid">
+        <div class="p-item"><div class="p-name">FD</div><div class="p-val" id="fdVal">₹0</div></div>
+        <div class="p-item"><div class="p-name">MF SIP</div><div class="p-val" id="mfVal">₹0</div></div>
+        <div class="p-item"><div class="p-name">STOCKS</div><div class="p-val" id="stVal">₹0</div></div>
+      </div>
+      <div class="val-box">
+        <div class="v-det"><span>💰 CASH</span><strong style="color:var(--cyan); font-size:20px;" id="cashVal">₹250.00</strong></div>
+        <div style="width:1px;height:30px;background:var(--border);"></div>
+        <div class="v-det" style="text-align:right;"><span>📈 VALUATION</span><strong style="color:var(--gold); font-size:20px;" id="invVal">₹0.00</strong></div>
+      </div>
+    </div>
+    <div class="gcard g-span">
+      <div class="gc-title">Invest Your Virtual Money</div>
+      <div class="i-grid">
+        <div class="i-card">
+          <div class="i-name">🏦 Fixed Deposit</div>
+          <div class="i-ret">8%<span style="font-size:14px;font-weight:500;color:var(--muted)"> p.a.</span></div>
+          <input class="amt-in" id="amt-fd" type="number" placeholder="₹ Amount">
+          <div style="display:flex;gap:8px;"><button class="i-btn" onclick="invest('fd')">INVEST</button><button class="i-btn w-btn" onclick="withdraw('fd')">SELL</button></div>
+        </div>
+        <div class="i-card">
+          <div class="i-name">📊 Mutual Fund SIP</div>
+          <div class="i-ret">12%<span style="font-size:14px;font-weight:500;color:var(--muted)"> p.a.</span></div>
+          <input class="amt-in" id="amt-mf" type="number" placeholder="₹ Amount">
+          <div style="display:flex;gap:8px;"><button class="i-btn" onclick="invest('mf')">INVEST</button><button class="i-btn w-btn" onclick="withdraw('mf')">SELL</button></div>
+        </div>
+        <div class="i-card">
+          <div class="i-name">🚀 Stocks</div>
+          <div class="i-ret">~25%<span style="font-size:14px;font-weight:500;color:var(--muted)"> p.a.</span></div>
+          <input class="amt-in" id="amt-st" type="number" placeholder="₹ Amount">
+          <div style="display:flex;gap:8px;"><button class="i-btn" onclick="invest('st')">INVEST</button><button class="i-btn w-btn" onclick="withdraw('st')">SELL</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="chat-widget">
+    <div class="chat-box open" id="chatBox">
+      <div class="chat-head">
+        <div class="chat-hname">CRORE AI 🧠</div>
+      </div>
+      <div class="chat-msgs" id="chatMessages">
+        <div class="msg ai">Yo! I'm your offline CroreBot Assistant! Market got you confused? Ask me about FDs, Stocks, or SIPs!</div>
+      </div>
+      <div class="chat-input-row">
+        <input class="chat-in" id="chatInput" placeholder="Ask about stocks, dips, strategy..." onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="chat-send" onclick="sendChat()">➤</button>
+      </div>
+    </div>
+    <button class="chat-toggle" onclick="toggleChat()">🤖</button>
+  </div>
+</div>
+
+<div id="infoScreen" class="screen">
+  <div class="bg-canvas"><div class="orb o1" style="opacity:0.15;"></div></div>
+  <div style="flex:1; display:flex; align-items:center; justify-content:center; padding:20px;">
+    <div style="max-width:600px; width:100%; background:rgba(0,0,0,0.7); padding:40px; border-radius:24px; border:1px solid var(--cyan); backdrop-filter:blur(20px); position:relative; z-index:1; text-align:left;">
+      <h1 id="infoTitle" style="font-size:36px; margin-bottom:8px; color:var(--text);">Asset Name</h1>
+      <div id="infoRisk" style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; margin-bottom:24px; letter-spacing:1px;">⚡ Risk Level</div>
+      <div style="font-size:16px; line-height:1.7; color:var(--text); opacity:0.85; margin-bottom:40px;" id="infoHistory">Asset history goes here.</div>
+      <button onclick="showScreen('landing')" class="cta" style="width:auto; display:inline-block; padding:14px 40px; font-size:16px;">← BACK TO HOME</button>
+    </div>
+  </div>
+</div>
+
+<div id="death" class="screen">
+  <div class="bg-canvas"><div class="orb" style="width:600px;height:600px;background:#F43F5E;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0.15;"></div></div>
+  <div class="death-inner">
+    <div class="d-emoji">💀</div>
+    <div class="d-title">EMPIRE FELL</div>
+    <div class="d-cause">Cause of death: <span id="deathCause">Panic selling</span></div>
+    <div class="score-row">
+      <div class="score-chip"><div class="sc-val" id="hsDisplay">₹0</div><div class="sc-lbl">🏆 HIGH SCORE</div></div>
+      <div class="score-chip"><div class="sc-val" id="mthDisplay">0</div><div class="sc-lbl">📅 MONTHS SURVIVED</div></div>
+    </div>
+    <button class="restart-btn mb-24" onclick="restartGame()">RISE AGAIN 🚀</button><br>
+    <button onclick="showScreen('landing')" class="back-btn">← RETURN TO HOME</button>
+  </div>
+</div>
+
+<div id="win" class="screen">
+  <div class="bg-canvas"><div class="orb" style="width:600px;height:600px;background:#10B981;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0.15;"></div></div>
+  <div class="win-inner">
+    <div class="w-emoji">🏆</div>
+    <div class="w-title">CRORE UNLOCKED!</div>
+    <div class="w-sub" style="font-size:18px; margin-bottom:32px;">You built an empire!</div>
+    <div class="w-amt" style="font-family:'Space Grotesk'; font-weight:700; font-size:70px; margin-bottom:40px;">₹1,00,00,000</div>
+    <button class="restart-btn mb-24" style="background:var(--green);color:#000;" onclick="restartGame()">BUILD ANOTHER CRORE 🚀</button><br>
+    <button onclick="showScreen('landing')" class="back-btn">← RETURN TO HOME</button>
+  </div>
+</div>
+
+<div id="leaderboardModal">
+  <div class="lb-box">
+    <button class="lb-close" onclick="document.getElementById('leaderboardModal').classList.remove('active')">✖</button>
+    <div class="lb-title">Top Investors (Monthly)</div>
+    <div class="lb-list" id="lbList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let dynamicLevels = [];
+function generateLevels(startAmt) {
+  dynamicLevels = [];
+  let cur = startAmt;
+  for(let i=1; i<=5; i++) {
+    let next = cur * 10;
+    dynamicLevels.push({min: cur, max: next, label: `Level ${i}: ${fmt(cur)} → ${fmt(next)}`});
+    cur = next;
+  }
+}
+
+let defaultState = () => ({
+  username: 'GUEST',
+  cash: 250,
+  fd: 0,
+  mf: 0,
+  stocks: 0,
+  month: 0,
+  highScore: 0,
+  level: 0,
+  chartData: [250]
+});
+
+let state = defaultState();
+let gChart;
+
+let liveData={nifty:null,gold:null,btc:null,eth:null,usd:null};
+async function fetchAllData(){
+  await Promise.allSettled([fetchCrypto(), fetchForex()]);
+  simulateNifty();
+  updateTicker();
+}
+async function fetchCrypto(){
+  try{
+    const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=inr&include_24hr_change=true');
+    const d=await r.json();
+    liveData.btc={price:d.bitcoin.inr, change:d.bitcoin.inr_24h_change};
+    liveData.eth={price:d.ethereum.inr};
+    const bp = d.bitcoin.inr;
+    if(document.getElementById('btc-price')) document.getElementById('btc-price').textContent='₹'+fmtLg(bp);
+    if(document.getElementById('btc-change')) document.getElementById('btc-change').innerHTML=`<span class="${d.bitcoin.inr_24h_change>=0?'up':'dn'}">${d.bitcoin.inr_24h_change>=0?'+':''}${d.bitcoin.inr_24h_change.toFixed(2)}% (24h)</span>`;
+  }catch(e){}
+}
+async function fetchForex(){
+  try{
+    const r=await fetch('https://open.er-api.com/v6/latest/USD');
+    const d=await r.json();
+    liveData.usd=d.rates.INR;
+    const goldINR=(3100*liveData.usd/31.1035)*10;
+    liveData.gold=goldINR;
+    if(document.getElementById('gold-price')) document.getElementById('gold-price').textContent='₹'+Math.round(goldINR).toLocaleString('en-IN');
+    if(document.getElementById('gold-change')) document.getElementById('gold-change').innerHTML=`<span class="neu">Live Estimate</span>`;
+  }catch(e){}
+}
+function simulateNifty(){
+  const base=22200+Math.random()*1200-600;
+  liveData.nifty=base;
+  if(document.getElementById('nifty-price')) document.getElementById('nifty-price').textContent='₹'+Math.round(base).toLocaleString('en-IN');
+  if(document.getElementById('nifty-change')) document.getElementById('nifty-change').innerHTML=`<span class="neu">Base Rate</span>`;
+}
+function fmtLg(n){
+  if(n>=10000000) return (n/10000000).toFixed(2)+'Cr';
+  if(n>=100000) return (n/100000).toFixed(2)+'L';
+  if(n>=1000) return (n/1000).toFixed(1)+'K';
+  return n.toFixed(0);
+}
+function updateTicker(){
+  const btcStr=liveData.btc?'₹'+fmtLg(liveData.btc.price)+(liveData.btc.change>=0?' ▲':' ▼'):'—';
+  const goldStr=liveData.gold?'₹'+Math.round(liveData.gold).toLocaleString('en-IN')+'/10g':'—';
+  const usdStr=liveData.usd?'₹'+liveData.usd.toFixed(2):'—';
+  const ethStr=liveData.eth?'₹'+fmtLg(liveData.eth.price):'—';
+  const nStr=liveData.nifty?'₹'+Math.round(liveData.nifty).toLocaleString('en-IN'):'—';
+  ['t-nifty','t-nifty2'].forEach(id=>{if(document.getElementById(id)) document.getElementById(id).textContent=nStr;});
+  ['t-gold','t-gold2'].forEach(id=>{if(document.getElementById(id)) document.getElementById(id).textContent=goldStr;});
+  ['t-btc','t-btc2'].forEach(id=>{if(document.getElementById(id)) document.getElementById(id).textContent=btcStr;});
+  ['t-usd','t-usd2'].forEach(id=>{if(document.getElementById(id)) document.getElementById(id).textContent=usdStr;});
+  ['t-eth','t-eth2'].forEach(id=>{if(document.getElementById(id)) document.getElementById(id).textContent=ethStr;});
+  
+  if(document.getElementById('mh-nifty')) document.getElementById('mh-nifty').textContent = nStr;
+  if(document.getElementById('mh-gold')) document.getElementById('mh-gold').textContent = goldStr;
+}
+
+function fmt(n) {
+  if (n>=10000000) return '₹'+(n/10000000).toFixed(2)+'Cr';
+  if (n>=100000) return '₹'+(n/100000).toFixed(2)+'L';
+  if (n>=1000) return '₹'+Math.floor(n/1000)+','+(Math.floor(n)%1000).toString().padStart(3,'0');
+  return '₹'+n.toFixed(2);
+}
+function total(){return state.cash+state.fd+state.mf+state.stocks;}
+
+function saveProfile() {
+  if(state.username === 'GUEST') return;
+  safeStoreSet('croreQuest_user_' + state.username, JSON.stringify(state));
+}
+
+function updateGameUI(){
+  const t=total();
+  const prev=state.chartData[state.chartData.length-2]||state.chartData[0];
+  const chg=((t-prev)/prev*100)||0;
+  
+  document.getElementById('balanceDisplay').textContent=fmt(t);
+  document.getElementById('balanceDisplay').className='bal-disp '+(chg>=0?'win':'loss');
+  document.getElementById('balanceChange').textContent=(chg>=0?'+':'')+chg.toFixed(2)+'%';
+  document.getElementById('balanceChange').className='bc '+(chg>=0?'up':'dn');
+  document.getElementById('monthDisplay').textContent='📅 MONTH '+state.month;
+  
+  document.getElementById('fdVal').textContent=fmt(state.fd);
+  document.getElementById('mfVal').textContent=fmt(state.mf);
+  document.getElementById('stVal').textContent=fmt(state.stocks);
+  document.getElementById('cashVal').textContent=fmt(state.cash);
+  document.getElementById('invVal').textContent=fmt(state.fd+state.mf+state.stocks);
+  
+  let lvl=dynamicLevels.findIndex(l=>t>=l.min&&t<l.max);
+  if(lvl<0) lvl=t>=dynamicLevels[4].max?4:0;
+  
+  if (lvl > state.level && state.month > 0) {
+    state.cash += 500;
+    showToast(`🎉 Level ${lvl+1} Unlocked! You received ₹500 Reward to Cash!`);
+    state.chartData[state.chartData.length-1] += 500;
+  }
+  state.level = lvl;
+  
+  const lv=dynamicLevels[lvl]||dynamicLevels[4];
+  document.getElementById('levelBadge').textContent='LEVEL '+(lvl+1);
+  document.getElementById('progressLabel').textContent=lv.label;
+  const pct=Math.min(100, Math.max(0, ((t-lv.min)/(lv.max-lv.min)*100)));
+  document.getElementById('progFill').style.width=pct+'%';
+  document.getElementById('progressPct').textContent=Math.round(pct)+'%';
+  
+  saveProfile();
+  updateLeaderboardUI();
+}
+
+function stepLogic(){
+  state.month++;
+  state.fd*=1+0.08/12;
+  state.mf*=1+0.12/12;
+  const sr=Math.random()*0.14-0.04;
+  state.stocks*=(1+sr);
+  if(state.stocks<0.01) state.stocks=0;
+  const t=total();
+  state.chartData.push(parseFloat(t.toFixed(2)));
+  if(t>state.highScore) state.highScore=t;
+  if(gChart){
+    gChart.data.labels.push('M'+state.month);
+    gChart.data.datasets[0].data.push(parseFloat(t.toFixed(2)));
+  }
+  return sr;
+}
+
+function getMarketReason(sr) {
+  if (state.stocks === 0) return "FDs & MFs grew steadily. Zero stock exposure = Zero Volatility.";
+  if (sr > 0.08) return "Massive Bull Run! 🚀 FII poured money in.";
+  if (sr > 0.04) return "Strong Earnings! 📈 Companies reported record profit.";
+  if (sr > 0) return "Steady Market. 🐢 Market accumulating steadily.";
+  if (sr < -0.02) return "Market Correction! 🚨 Inflation fears triggered selling.";
+  return "Minor Dip. 📉 Investors booked profits early.";
+}
+
+function skipMonth(){
+  const sr = stepLogic();
+  if(gChart) gChart.update('none');
+  updateGameUI();
+  showToast(`M${state.month}: ${getMarketReason(sr)}`);
+  checkGameEnd(total());
+}
+
+function skipYear(){
+  let finalSr=0;
+  for(let i=0; i<12; i++) finalSr = stepLogic();
+  if(gChart) gChart.update('none');
+  updateGameUI();
+  showToast(`🚀 Year Skipped! Latest Driver: ${getMarketReason(finalSr)}`);
+  checkGameEnd(total());
+}
+
+function checkGameEnd(t) {
+  if(t<0.01) showScreen('death');
+  if(t>=10000000) showScreen('win');
+}
+
+function invest(type){
+  const inp=document.getElementById('amt-'+type);
+  const amt=parseFloat(inp.value);
+  if(!amt||amt<=0) return;
+  if(amt>state.cash){showToast('😅 Not enough cash!');return;}
+  state.cash-=amt;
+  if(type==='fd') state.fd+=amt;
+  else if(type==='mf') state.mf+=amt;
+  else state.stocks+=amt;
+  inp.value=''; showToast('Invested!'); updateGameUI();
+}
+
+function withdraw(type){
+  const inp=document.getElementById('amt-'+type);
+  const amt=parseFloat(inp.value);
+  if(!amt||amt<=0) return;
+  if(type==='fd') { if(amt>state.fd) return; state.fd-=amt; } 
+  else if(type==='mf') { if(amt>state.mf) return; state.mf-=amt; } 
+  else { if(amt>state.stocks) return; state.stocks-=amt; }
+  state.cash+=amt;
+  inp.value=''; showToast('Sold! Added to Cash!'); updateGameUI();
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3800);
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='landing') {
+    fetchAllData();
+    renderLoginBox();
+  }
+  if(id==='death') {
+    document.getElementById('hsDisplay').textContent=fmt(state.highScore);
+    document.getElementById('mthDisplay').textContent=state.month;
+  }
+}
+
+function renderLoginBox() {
+  const box = document.getElementById('loginBox');
+  if(!box) return;
+  if(state.username && state.username !== 'GUEST') {
+    box.innerHTML = `
+      <h3 style="color:var(--cyan); margin-bottom:16px; font-family:'Space Grotesk',sans-serif; font-size:24px;">Welcome back, ${state.username}!</h3>
+      <button class="cta" onclick="startGame()">RESUME EMPIRE →</button>
+      <button class="back-btn" style="margin-top:16px; border-color:var(--red); color:var(--red);" onclick="logout()">Sign Out & Restart</button>
+    `;
+  } else {
+    box.innerHTML = `
+      <input type="text" id="playName" class="cred-in" placeholder="Enter Username to Save Profile...">
+      <input type="number" id="playStartAmt" class="cred-in" placeholder="Starting Money (default ₹250)...">
+      <button class="cta" style="margin-top:12px;" onclick="startGame()">PLAY CROREQUEST →</button>
+    `;
+  }
+}
+
+function logout() {
+  safeStoreRemove('croreQuest_user_' + state.username);
+  state = defaultState();
+  renderLoginBox();
+}
+
+
+function initChart(){
+  const ctx=document.getElementById('growthChart').getContext('2d');
+  if(gChart) gChart.destroy();
+  gChart=new Chart(ctx,{
+    type:'line',
+    data:{labels:state.chartData.map((_,i)=>'M'+i),datasets:[{data:[...state.chartData],borderColor:'#00E5FF',backgroundColor:'rgba(0,229,255,0.1)',borderWidth:3,pointRadius:0,fill:true,tension:0.3}]},
+    options:{animation:{duration:0},responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:true,ticks:{color:'#64748B',font:{size:11,family:'Space Grotesk'},callback:v=>fmt(v)}}}}
+  });
+}
+
+function startGame(){
+  let usr = 'GUEST';
+  let usrAmt = 250;
+  
+  if (document.getElementById('playName')) {
+    usr = document.getElementById('playName').value.trim() || 'GUEST';
+    usrAmt = parseFloat(document.getElementById('playStartAmt').value);
+    if(isNaN(usrAmt) || usrAmt < 250) usrAmt = 250;
+  } else {
+    usr = state.username;
+    usrAmt = state.chartData[0];
+  }
+  
+  generateLevels(usrAmt);
+  
+  let saved = safeStoreGet('croreQuest_user_' + usr);
+  if (saved && usr !== 'GUEST') {
+    state = JSON.parse(saved);
+    generateLevels(state.chartData[0]);
+  } else {
+    state = defaultState();
+    state.username = usr;
+    state.cash = usrAmt;
+    state.chartData = [usrAmt];
+  }
+  
+  document.getElementById('profileName').textContent = 'USER: ' + state.username.toUpperCase();
+  document.getElementById('levelBadge').textContent = 'LEVEL ' + (state.level + 1);
+  safeStoreSet('croreQuest_lastUser', usr);
+  showScreen('marketHome');
+  initChart();
+  updateGameUI();
+}
+
+function restartGame(){
+  let usr = state.username;
+  state = defaultState();
+  state.username = usr;
+  safeStoreSet('croreQuest_user_' + usr, JSON.stringify(state));
+  if(gChart) gChart.destroy();
+  showScreen('game'); initChart(); updateGameUI();
+}
+
+// In-memory fallback if localStorage is blocked
+let memoryStore = {};
+function safeStoreSet(key, val) {
+  try { localStorage.setItem(key, val); } catch(e) { memoryStore[key] = val; }
+}
+function safeStoreGet(key) {
+  try { return localStorage.getItem(key); } catch(e) { return memoryStore[key]; }
+}
+function safeStoreRemove(key) {
+  try { localStorage.removeItem(key); } catch(e) { delete memoryStore[key]; }
+}
+
+// Leaderboard Logic
+function updateLeaderboardUI() {
+  const lb = document.getElementById('lbList');
+  lb.innerHTML = '';
+  let lbData = [
+    {n: 'Warren B.', s: 500000},
+    {n: 'Rakesh J.', s: 1200000},
+    {n: 'Harshad M.', s: 5000},
+    {n: 'CryptoKing', s: 75000},
+    {n: state.username, s: total(), isMe: true}
+  ];
+  lbData.sort((a,b)=>b.s - a.s);
+  
+  lbData.forEach((u, i) => {
+    lb.innerHTML += `
+      <div class="lb-item ${u.isMe ? 'me' : ''}">
+        <span>#${i+1} ${u.n} ${u.isMe ? '(You)' : ''}</span>
+        <span>${fmt(u.s)}</span>
+      </div>
+    `;
+  });
+}
+
+// Offline AI Assistant Rules Engine
+let chatOpen=true;
+function toggleChat(){chatOpen=!chatOpen;document.getElementById('chatBox').classList.toggle('open',chatOpen);}
+
+function getOfflineBotResponse(msg) {
+  const m = msg.toLowerCase();
+  const t = total();
+  const cashPct = (state.cash / t) * 100;
+  
+  if(m.includes('hello') || m.includes('hi')) return `Hello! I'm your CroreQuest Strategist. Currently, your empire is worth ${fmt(t)}. How can I assist your wealth-building today?`;
+  
+  if(m.includes('stock')) {
+    if(state.stocks === 0) return "You have 0% exposure to Stocks. While risky, they are the fastest engine for reaching 1 Crore. Consider allocating at least 20% of your cash during a market dip.";
+    return "Stocks are your high-growth engine. Expect volatility, but stay disciplined. Historically, staying invested through the 'noise' yields the highest returns.";
+  }
+  
+  if(m.includes('fd') || m.includes('fixed')) return "Fixed Deposits are your safety net, yielding a guaranteed 8%. In a simulator where time moves fast, FDs prevent 'ruin' during massive market corrections.";
+  
+  if(m.includes('mf') || m.includes('sip') || m.includes('mutual')) return "SIPs (12% p.a.) are the backbone of wealth. They smooth out market volatility. My recommendation? Never let your SIP balance drop below your FD balance.";
+  
+  if(m.includes('strategy') || m.includes('help') || m.includes('tips')) {
+    if(cashPct > 50) return `You're sitting on ${cashPct.toFixed(0)}% Cash. This is 'Dry Powder'. Deploy it into Mutual Funds or Stocks to start compounding!`;
+    return "Your current strategy should be 'Aggressive Compounding'. Keep your cash below 15% and distribute the rest across Stocks and MFs for maximum velocity.";
+  }
+  
+  if(m.includes('crash') || m.includes('dip')) return "In CroreQuest, a 'Market Correction' is a gift. If you see a negative return in the ticker, that's your signal to move Cash into Stocks immediately.";
+  
+  if(m.includes('sell') || m.includes('withdraw')) return "Securing profits is a pro move. If your Stock valuation has doubled, moving some to Cash or FD ensures you don't lose your progress in a sudden crash.";
+  
+  if(m.includes('crore')) return `To reach 1 Crore from ${fmt(t)}, you need to grow your portfolio by approx ${(10000000/t).toFixed(1)}x. Consistency is your best friend.`;
+
+  const randoms = [
+    "The best time to plant a tree was 20 years ago. The second best time is now. Keep investing!",
+    "Market sentiment is temporary; compounding is forever. What's your next move?",
+    "I'm analyzing the latest trends... Conclusion: Stay the course, keep your SIPs running.",
+    "Data suggests that consistent monthly investors reach the Crore mark 40% faster than 'timers'."
+  ];
+  return randoms[Math.floor(Math.random()*randoms.length)];
+}
+
+function sendChat(){
+  const inp=document.getElementById('chatInput');
+  const msg=inp.value.trim();
+  if(!msg) return;
+  inp.value='';
+  appendMsg(msg,'user');
+  appendMsg('Typing...','typing','typingMsg');
+  
+  setTimeout(() => {
+    removeMsg('typingMsg');
+    appendMsg(getOfflineBotResponse(msg), 'ai');
+  }, 400);
+}
+
+function appendMsg(text,type,id){
+  const msgs=document.getElementById('chatMessages');
+  const div=document.createElement('div');
+  div.className='msg '+type;div.textContent=text;
+  if(id) div.id=id;
+  msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;
+}
+function removeMsg(id){const e=document.getElementById(id);if(e)e.remove();}
+
+const assetInfo = {
+  nifty: { title: "Nifty 50 (India Index)", risk: "⚡ Medium Risk", hist: "The NIFTY 50 is a benchmark stock market index representing the weighted average of 50 of the largest Indian companies listed on the National Stock Exchange. It is considered 'Medium Risk' because it is highly diversified across 13 different sectors. Historically, it has provided a steady 12-14% annualized return over long periods, making it the most popular wealth-building tool." },
+  gold: { title: "Gold 24K", risk: "🛡️ Low Risk", hist: "Gold has been a global store of value for thousands of years. It is considered 'Low Risk' because its physical scarcity prevents inflation from destroying its purchasing power. During economic crises, investors flock to Gold as a 'safe haven'. However, it offers much lower long-term portfolio growth compared to equities." },
+  btc: { title: "Bitcoin (Crypto)", risk: "🔥 Extreme Risk", hist: "Bitcoin is a decentralized digital currency characterized by extreme price volatility. Because it is not tied to physical cash flows or government backing, its price is dependent purely on market sentiment. While it has historical cycles of producing massive returns, it also routinely experiences 'crypto winters' where it can lose 80% of its value." }
+};
+function showInfo(type) {
+  const data = assetInfo[type];
+  document.getElementById('infoTitle').textContent = data.title;
+  document.getElementById('infoRisk').textContent = data.risk;
+  if(type==='nifty') document.getElementById('infoRisk').style.color = "var(--cyan)";
+  if(type==='gold') document.getElementById('infoRisk').style.color = "var(--gold)";
+  if(type==='btc') document.getElementById('infoRisk').style.color = "#F7931A";
+  document.getElementById('infoHistory').textContent = data.hist;
+  showScreen('infoScreen');
+}
+
+// INITIALIZE LIVE APIS
+fetchAllData();
+setInterval(fetchAllData, 60000);
+
+// Persistence: check for last used username
+const lastUser = safeStoreGet('croreQuest_lastUser');
+if(lastUser && lastUser !== 'GUEST') {
+  state.username = lastUser;
+}
+
+renderLoginBox();
+</script>
+</body>
+</html>
